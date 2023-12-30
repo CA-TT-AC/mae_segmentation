@@ -18,7 +18,8 @@ _base_ = [
 crop_size = (512, 512)
 
 model = dict(
-    pretrained='https://dl.fbaipublicfiles.com/mae/pretrain/mae_pretrain_vit_base.pth',
+    # pretrained='https://dl.fbaipublicfiles.com/mae/pretrain/mae_pretrain_vit_base.pth',
+    pretrained='/data/discover-07/xuj/workspace/mae_segmentation_old/mae_pretrain_vit_base.pth',
     # '/xiangli/mae/pretrain/mae_pretrain_vit_base.pth',
     # download the pretraining ViT-Base model: https://dl.fbaipublicfiles.com/mae/pretrain/mae_pretrain_vit_base.pth
     backbone=dict(
