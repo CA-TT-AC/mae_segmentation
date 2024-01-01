@@ -12,10 +12,10 @@
 # --------------------------------------------------------'
 # reproduce the semantic segmentation results 48.15 (mIoU) for ViT-base in MAE
 _base_ = [
-    '../_base_/models/upernet.py', '../_base_/datasets/ade20k.py',
+    '../_base_/models/upernet.py', '../_base_/datasets/nyu.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_160k.py'
 ]
-crop_size = (512, 512)
+crop_size = (384, 512)
 
 model = dict(
     # pretrained='https://dl.fbaipublicfiles.com/mae/pretrain/mae_pretrain_vit_base.pth',
@@ -24,7 +24,7 @@ model = dict(
     # download the pretraining ViT-Base model: https://dl.fbaipublicfiles.com/mae/pretrain/mae_pretrain_vit_base.pth
     backbone=dict(
         type='MAE',
-        img_size=512,
+        img_size=crop_size,
         patch_size=16,
         embed_dim=768,
         depth=12,
@@ -39,14 +39,15 @@ model = dict(
     ),
     decode_head=dict(
         in_channels=[768, 768, 768, 768],
-        num_classes=150,
+        num_classes=895,
         channels=768,
     ),
     auxiliary_head=dict(
         in_channels=768,
-        num_classes=150
+        num_classes=895
     ), 
-    test_cfg = dict(mode='slide', crop_size=crop_size, stride=(341, 341))
+    # test_cfg = dict(mode='slide', crop_size=crop_size, stride=(341, 341))
+    test_cfg = dict(mode='whole')
 )
 
 optimizer = dict(_delete_=True, type='AdamW', lr=1e-4, betas=(0.9, 0.999), weight_decay=0.05,
@@ -60,7 +61,7 @@ lr_config = dict(_delete_=True, policy='poly',
                  power=1.0, min_lr=0.0, by_epoch=False)
 
 # By default, models are trained on 8 GPUs with 2 images per GPU
-data=dict(samples_per_gpu=4)
+data=dict(samples_per_gpu=2)
 
 runner = dict(type='IterBasedRunnerAmp')
 

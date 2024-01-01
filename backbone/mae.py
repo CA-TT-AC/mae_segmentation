@@ -172,9 +172,13 @@ class Block(nn.Module):
 class PatchEmbed(nn.Module):
     """ Image to Patch Embedding
     """
-    def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768):
+    def __init__(self, img_size=(640, 480), patch_size=16, in_chans=3, embed_dim=768):
         super().__init__()
-        img_size = to_2tuple(img_size)
+        
+        # img_size = to_2tuple(img_size)
+        if not isinstance(img_size, tuple):
+            img_size = to_2tuple(img_size)
+        assert isinstance(img_size, tuple)
         patch_size = to_2tuple(patch_size)
         num_patches = (img_size[1] // patch_size[1]) * (img_size[0] // patch_size[0])
         self.patch_shape = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
@@ -200,10 +204,12 @@ class HybridEmbed(nn.Module):
     """ CNN Feature Map Embedding
     Extract feature map from CNN, flatten, project to embedding dim.
     """
-    def __init__(self, backbone, img_size=224, feature_size=None, in_chans=3, embed_dim=768):
+    def __init__(self, backbone, img_size=(640, 480), feature_size=None, in_chans=3, embed_dim=768):
         super().__init__()
+        # print('image size:', img_size)
+        assert isinstance(img_size, tuple)
         assert isinstance(backbone, nn.Module)
-        img_size = to_2tuple(img_size)
+        # img_size = to_2tuple(img_size)
         self.img_size = img_size
         self.backbone = backbone
         if feature_size is None:
@@ -283,7 +289,6 @@ class MAE(nn.Module):
         norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
-
         if hybrid_backbone is not None:
             self.patch_embed = HybridEmbed(
                 hybrid_backbone, img_size=img_size, in_chans=in_chans, embed_dim=embed_dim)
@@ -411,10 +416,11 @@ class MAE(nn.Module):
 
         cls_tokens = self.cls_token.expand(batch_size, -1, -1)
         x = torch.cat((cls_tokens, x), dim=1)
+        # print('x.shape', x.shape)
+        # print('pos_embed.shape', self.pos_embed.shape)
         if self.pos_embed is not None:
             x = x + self.pos_embed
         x = self.pos_drop(x)
-
         rel_pos_bias = self.rel_pos_bias() if self.rel_pos_bias is not None else None
         features = []
         for i, blk in enumerate(self.blocks):
