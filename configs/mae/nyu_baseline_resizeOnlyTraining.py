@@ -12,7 +12,7 @@
 # --------------------------------------------------------'
 # reproduce the semantic segmentation results 48.15 (mIoU) for ViT-base in MAE
 _base_ = [
-    '../_base_/models/upernet.py', '../_base_/datasets/nyu.py',
+    '../_base_/models/upernet.py', '../_base_/datasets/nyu_resize.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_160k.py'
 ]
 crop_size = (384, 512)

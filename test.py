@@ -11,7 +11,7 @@ from mmseg.apis import multi_gpu_test, single_gpu_test
 from mmseg.datasets import build_dataloader, build_dataset
 from mmseg.models import build_segmentor
 from backbone import mae
-
+from mmseg_custom.datasets import nyu
 def parse_args():
     parser = argparse.ArgumentParser(
         description='mmseg test (and eval) a model')
