@@ -15,7 +15,7 @@ _base_ = [
     '../_base_/models/upernet.py', '../_base_/datasets/nyu_al.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_160k.py'
 ]
-crop_size = (384, 512)
+crop_size = (448, 448)
 
 model = dict(
     # pretrained='https://dl.fbaipublicfiles.com/mae/pretrain/mae_pretrain_vit_base.pth',

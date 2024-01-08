@@ -4,14 +4,14 @@ data_root = '/data/xuj/workspace/dataset/NYUv2/mmseg_version'
 kp_infor_dir = '/data/xuj/workspace/dataset/NYUv2/mmseg_version/images/train/patch_ids.json'
 img_norm_cfg = dict(
     mean=[123.55185386, 106.10660834, 101.43416643], std=[73.27660521, 75.08845355, 78.38360167], to_rgb=True)
-crop_size = (384, 512)
+crop_size = (448, 448)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', reduce_zero_label=True),
     # dict(type='Resize', img_scale=(480, 640), ratio_range=(0.5, 2.0)),
     # dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
-    dict(type='Resize', img_scale=(480, 640)),
-    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
+    dict(type='Resize', img_scale= (448, 448), keep_ratio=False),
+    # dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
     dict(type='Normalize', **img_norm_cfg),
@@ -23,11 +23,11 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
         type='MultiScaleFlipAug',
-        img_scale=(384, 512),
+        img_scale= (448, 448),
         # img_ratios=[0.5, 0.75, 1.0, 1.25, 1.5, 1.75],
         flip=False,
         transforms=[
-            dict(type='Resize', keep_ratio=True),
+            dict(type='Resize', keep_ratio=False),
             dict(type='RandomFlip'),
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ImageToTensor', keys=['img']),

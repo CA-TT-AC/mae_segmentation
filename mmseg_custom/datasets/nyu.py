@@ -3,7 +3,7 @@ import json
 import os
 from mmseg.datasets.custom import CustomDataset
 from mmseg.datasets.builder import DATASETS
-from torch import Tensor
+import torch
 @DATASETS.register_module()
 class NyuDataset_al(CustomDataset):
     CLASSES = ('wall', 'floor', 'cabinet', 'bed', 'chair', 'sofa', 'table', 'door', 'window', 'bookshelf', 'picture', 'counter', 'blinds', 'desk', 'shelves', 'curtain', 'dresser', 'pillow', 'mirror', 'floor mat', 'clothes', 'ceiling', 'books', 'refridgerator', 'television', 'paper', 'towel', 'shower curtain', 'box', 'whiteboard', 'person', 'night stand', 'toilet', 'sink', 'lamp', 'bathtub', 'bag', 'otherstructure', 'otherfurniture', 'otherprop')
@@ -25,7 +25,45 @@ class NyuDataset_al(CustomDataset):
                     json_dict = json.load(f)
                 self.kp_infors = json_dict
                 # in this json_dict, key is file name without suffix, value is what should be return while calling __getitem__
-            
+    def coord2patchId(img_size, coord, ps=16):
+        """Get training/test data after pipeline.
+        Args:
+            img_size (tuple): input image size.
+            coord (tuple): query coord
+
+        Returns:
+            dict: Training/test data (with annotation if `test_mode` is set
+                False).
+        """
+        n_w = img_size[0] // ps
+        patch_coord = (coord[0]//16)+1, (coord[1]//16)+1
+        id = patch_coord[1] * n_w + patch_coord[0]
+        return id
+    
+    def coord2patchId_tensor(self, img_size, coords, ps=16):
+        """
+        Convert a 3D tensor of coordinates to corresponding patch ids.
+
+        Args:
+            img_size (tuple): input image size (height, width).
+            coords (tensor): A 3D tensor of shape [x, y, 2] where coords[x, y] is the coordinate.
+            ps (int): patch size.
+
+        Returns:
+            Tensor: A 2D tensor of shape [x, y] containing patch ids.
+        """
+        n_w = img_size[1] // ps
+        patch_coords = coords // ps
+        ids = (patch_coords[..., 1] + 1) * n_w + (patch_coords[..., 0] + 1)
+        return ids
+    
+    def create_coordinate_tensor(self, img_size):
+        h, w = img_size
+        y_coords, x_coords = torch.meshgrid(torch.arange(w), torch.arange(h))
+        return torch.stack((y_coords, x_coords), dim=-1)
+    
+    def patch_mask(self, patch_ids, img_size, ps=16):
+        pass
         
     def __getitem__(self, idx):
         """Get training/test data after pipeline.
@@ -41,14 +79,23 @@ class NyuDataset_al(CustomDataset):
         if self.test_mode:
             return self.prepare_test_img(idx)
         else:
+            
             data = self.prepare_train_img(idx)
             
+            img_size = data['img_metas'].data['img_shape']
+            img_size = img_size[0], img_size[1]
+            ts = self.create_coordinate_tensor(img_size)
+            n_ts = self.coord2patchId_tensor(img_size, ts)
+            print(n_ts.shape)
+            print(n_ts)
+            
+            exit()
             file_name = data['img_metas'].data['ori_filename']
             ori_filename = file_name.split('.')[0]
+            ori_ann = data['gt_semantic_seg']
+            print(ori_ann.data.shape)
             # print(data)
             kp_infor = self.kp_infors[ori_filename]['patch']
-            # print(kp_infor)
-            data['img_metas'].data['kp'] = Tensor(kp_infor)
             return data
             # print(data)
             # exit()
