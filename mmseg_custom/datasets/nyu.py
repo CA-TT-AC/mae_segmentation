@@ -4,6 +4,8 @@ import os
 from mmseg.datasets.custom import CustomDataset
 from mmseg.datasets.builder import DATASETS
 import torch
+from mmcv.parallel import DataContainer
+
 @DATASETS.register_module()
 class NyuDataset_al(CustomDataset):
     CLASSES = ('wall', 'floor', 'cabinet', 'bed', 'chair', 'sofa', 'table', 'door', 'window', 'bookshelf', 'picture', 'counter', 'blinds', 'desk', 'shelves', 'curtain', 'dresser', 'pillow', 'mirror', 'floor mat', 'clothes', 'ceiling', 'books', 'refridgerator', 'television', 'paper', 'towel', 'shower curtain', 'box', 'whiteboard', 'person', 'night stand', 'toilet', 'sink', 'lamp', 'bathtub', 'bag', 'otherstructure', 'otherfurniture', 'otherprop')
@@ -37,6 +39,8 @@ class NyuDataset_al(CustomDataset):
         """
         n_w = img_size[0] // ps
         patch_coord = (coord[0]//16)+1, (coord[1]//16)+1
+        
+        
         id = patch_coord[1] * n_w + patch_coord[0]
         return id
     
@@ -53,8 +57,8 @@ class NyuDataset_al(CustomDataset):
             Tensor: A 2D tensor of shape [x, y] containing patch ids.
         """
         n_w = img_size[1] // ps
-        patch_coords = coords // ps
-        ids = (patch_coords[..., 1] + 1) * n_w + (patch_coords[..., 0] + 1)
+        patch_coords = torch.div(coords, ps, rounding_mode='trunc')
+        ids = (patch_coords[..., 0] ) * n_w + (patch_coords[..., 1] )
         return ids
     
     def create_coordinate_tensor(self, img_size):
@@ -62,8 +66,16 @@ class NyuDataset_al(CustomDataset):
         y_coords, x_coords = torch.meshgrid(torch.arange(w), torch.arange(h))
         return torch.stack((y_coords, x_coords), dim=-1)
     
-    def patch_mask(self, patch_ids, img_size, ps=16):
-        pass
+    def scale2x_patch_ids(self, ids, w_ori=224, w_cur=448, ps=16):
+        n_w_ori = w_ori // ps
+        n_w_cur = w_cur // ps
+        ids_1 = torch.div(ids, n_w_ori, rounding_mode='trunc') * n_w_cur + (ids % n_w_ori) * (n_w_cur / n_w_ori)
+        ids_1 = ids_1.type(torch.int32)
+        ids_2 = ids_1 + 1 
+        ids_3 = ids_1 + n_w_cur
+        ids_4 = ids_3 + 1
+        ret = torch.concat([ids_1, ids_2, ids_3, ids_4], dim=-1)
+        return ret
         
     def __getitem__(self, idx):
         """Get training/test data after pipeline.
@@ -84,21 +96,38 @@ class NyuDataset_al(CustomDataset):
             
             img_size = data['img_metas'].data['img_shape']
             img_size = img_size[0], img_size[1]
-            ts = self.create_coordinate_tensor(img_size)
-            n_ts = self.coord2patchId_tensor(img_size, ts)
-            print(n_ts.shape)
-            print(n_ts)
-            
-            exit()
+            # create a tensor of shape [h, w, 2] where ts[y, x, :] = [y, x]
+            coord_tensor = self.create_coordinate_tensor(img_size)
+            # shape of [h, w], save its patch ids of every pixel
+            patch_ids_tensor = self.coord2patchId_tensor(img_size, coord_tensor)
             file_name = data['img_metas'].data['ori_filename']
             ori_filename = file_name.split('.')[0]
-            ori_ann = data['gt_semantic_seg']
-            print(ori_ann.data.shape)
-            # print(data)
-            kp_infor = self.kp_infors[ori_filename]['patch']
-            return data
-            # print(data)
+            kp_infor_ori = torch.LongTensor(self.kp_infors[ori_filename]['patch'])
+            kp_infor_ori = kp_infor_ori[:10]
+            kp_infor_scaled = self.scale2x_patch_ids(kp_infor_ori)
+            mask = torch.isin(patch_ids_tensor, kp_infor_scaled)
+            
+            # print(mask)
+            # print(mask.shape)
+            # print(kp_infor_scaled)
+            # print('kp:', kp_infor_tensor.shape)
+            # print("ori")
+            # print(kp_infor_ori)
+            # print("scaled")
+            # print(kp_infor_scaled)
+            
+            ann = data['gt_semantic_seg'].data
+            # print(data['gt_semantic_seg'].size(), data['gt_semantic_seg'].dim(), data['gt_semantic_seg'].stack)
+            # print("ori")
+            # print(ann)
+            ann[:, ~mask] = 0
+            data['gt_semantic_seg'] = DataContainer(ann, stack=True)
+
+            # print("ann")
+            # print(ann)
+            
             # exit()
+            return data
 
 
 @DATASETS.register_module()
